@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Авто-сканер QR — Отметка прихода</title>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: Arial, sans-serif; text-align:center; padding:16px; }
+    h1 { font-size:20px; margin-bottom:6px; }
+    #reader { width:100%; max-width:420px; margin:10px auto; }
+    #status { margin-top:10px; font-size:18px; min-height:24px; }
+    #last { margin-top:6px; color:#444; font-size:14px; }
+    .ok { color: green; }
+    .err { color: #c33; }
+    .info { color: #333; }
+    button { margin-top:8px; padding:8px 12px; font-size:15px; }
+  </style>
+</head>
+<body>
+  <h1>Авто-сканер QR — Отметка прихода</h1>
+  <div id="reader"></div>
+  <div id="status" class="info">Готов к сканированию. Поднесите QR к камере.</div>
+  <div id="last"></div>
+  <button id="restartBtn" style="display:none;">Возобновить сканирование</button>
+
+  <script>
+    // ========== ВАЖНО: ВСТАВЬ СВОЙ ID ФОРМЫ НИЖЕ ==========
+    const FORM_ID = "1J06h2mBt5Qp7OA1LTsiPVGM2l77u_XjmubBLg1Mg9Pc"; // замените на свой ID формы (см. ниже)
+    // =====================================================
+
+    const ENTRY_EMP = "entry.1614082679"; // поле "QR данные сотрудника"
+    const ENTRY_SHIFT = "entry.656309949"; // поле "Смена"
+
+    const FORM_URL = `https://docs.google.com/forms/d/e/${FORM_ID}/formResponse`;
+
+    const statusEl = document.getElementById('status');
+    const lastEl = document.getElementById('last');
+    const restartBtn = document.getElementById('restartBtn');
+
+    // логика смен (твои интервалы)
+    function getShiftByTime(dateObj = new Date()) {
+      const h = dateObj.getHours();
+      if (h >= 7 && h < 17) return "1-я смена";
+      if (h >= 18 || h < 5) return "2-я смена";
+      return "Вне смены";
+    }
+
+    let lastSent = { text: null, ts: 0 };
+    const DEBOUNCE_MS = 2000;
+
+    async function sendToGoogleForm(qrText) {
+      const now = new Date();
+      const shift = getShiftByTime(now);
+      if (shift === "Вне смены") {
+        statusEl.textContent = "⛔ Сейчас вне времени смен — отметка не принимается.";
+        statusEl.className = "err";
+        return;
+      }
+
+      const t = Date.now();
+      if (lastSent.text === qrText && t - lastSent.ts < DEBOUNCE_MS) {
+        statusEl.textContent = "⏳ Пожалуйста, подержите код подальше на секунду...";
+        statusEl.className = "info";
+        return;
+      }
+      lastSent = { text: qrText, ts: t };
+
+      const formData = new URLSearchParams();
+      formData.append(ENTRY_EMP, qrText);
+      formData.append(ENTRY_SHIFT, shift);
+
+      try {
+        await fetch(FORM_URL, { method: "POST", mode: "no-cors", body: formData });
+        statusEl.textContent = `✅ Отметка принята — ${shift}`;
+        statusEl.className = "ok";
+        lastEl.textContent = `Содержимое QR: ${qrText} — ${now.toLocaleString()}`;
+      } catch (e) {
+        statusEl.textContent = "⚠️ Ошибка отправки (проверьте интернет/FORM_ID/entry)";
+        statusEl.className = "err";
+        lastEl.textContent = `QR: ${qrText}`;
+      }
+
+      setTimeout(() => {
+        statusEl.textContent = "Готов к сканированию. Поднесите QR к камере.";
+        statusEl.className = "info";
+      }, 2000);
+    }
+
+    function onScanSuccess(decodedText, decodedResult) {
+      html5QrCode.stop().then(() => {
+        sendToGoogleForm(decodedText);
+        restartBtn.style.display = "inline-block";
+      });
+    }
+
+    const html5QrCode = new Html5Qrcode("reader");
+    const config = { fps: 10, qrbox: { width: 300, height: 200 } };
+
+    function startScanner() {
+      statusEl.textContent = "Инициализация камеры...";
+      Html5Qrcode.getCameras().then(cameras => {
+        if (cameras && cameras.length) {
+          const cameraId = cameras[0].id;
+          html5QrCode.start(
+            cameraId,
+            config,
+            onScanSuccess,
+            (error) => {}
+          ).then(() => {
+            statusEl.textContent = "Готов к сканированию. Поднесите QR к камере.";
+            statusEl.className = "info";
+            restartBtn.style.display = "none";
+          }).catch(err => {
+            statusEl.textContent = "Ошибка запуска камеры: " + err;
+            statusEl.className = "err";
+          });
+        } else {
+          statusEl.textContent = "Камера не найдена";
+          statusEl.className = "err";
+        }
+      }).catch(err => {
+        statusEl.textContent = "Ошибка доступа к камере: " + err;
+        statusEl.className = "err";
+      });
+    }
+
+    restartBtn.addEventListener('click', () => {
+      startScanner();
+    });
+
+    window.addEventListener('load', startScanner);
+  </script>
+</body>
+</html>
