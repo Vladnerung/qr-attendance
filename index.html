@@ -25,20 +25,15 @@
   <button id="restartBtn" style="display:none;">Возобновить сканирование</button>
 
   <script>
-    // ========== ВАЖНО: ВСТАВЬ СВОЙ ID ФОРМЫ НИЖЕ ==========
-    const FORM_ID = "1J06h2mBt5Qp7OA1LTsiPVGM2l77u_XjmubBLg1Mg9Pc"; // замените на свой ID формы (см. ниже)
-    // =====================================================
-
-    const ENTRY_EMP = "entry.1614082679"; // поле "QR данные сотрудника"
-    const ENTRY_SHIFT = "entry.656309949"; // поле "Смена"
-
+    const FORM_ID = "1J06h2mBt5Qp7OA1LTsiPVGM2l77u_XjmubBLg1Mg9Pc";
+    const ENTRY_EMP = "entry.1614082679";
+    const ENTRY_SHIFT = "entry.656309949";
     const FORM_URL = `https://docs.google.com/forms/d/e/${FORM_ID}/formResponse`;
 
     const statusEl = document.getElementById('status');
     const lastEl = document.getElementById('last');
     const restartBtn = document.getElementById('restartBtn');
 
-    // логика смен (твои интервалы)
     function getShiftByTime(dateObj = new Date()) {
       const h = dateObj.getHours();
       if (h >= 7 && h < 17) return "1-я смена";
@@ -101,9 +96,9 @@
       statusEl.textContent = "Инициализация камеры...";
       Html5Qrcode.getCameras().then(cameras => {
         if (cameras && cameras.length) {
-          // Найдем камеру с "back" в названии, если есть
-        const backCamera = cameras.find(cam => cam.label.toLowerCase().includes("back"));
-        const cameraId = backCamera ? backCamera.id : cameras[0].id;
+          // Предпочитаем заднюю камеру, если есть
+          const backCamera = cameras.find(cam => cam.label.toLowerCase().includes("back"));
+          const cameraId = backCamera ? backCamera.id : cameras[0].id;
           html5QrCode.start(
             cameraId,
             config,
