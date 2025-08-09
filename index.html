@@ -101,11 +101,9 @@
       statusEl.textContent = "Инициализация камеры...";
       Html5Qrcode.getCameras().then(cameras => {
         if (cameras && cameras.length) {
-          .catch(err => {
-  statusEl.textContent = "Ошибка запуска камеры: " + err;
-  statusEl.className = "err";
-  console.error("Camera start error:", err);
-});
+          // Найдем камеру с "back" в названии, если есть
+        const backCamera = cameras.find(cam => cam.label.toLowerCase().includes("back"));
+        const cameraId = backCamera ? backCamera.id : cameras[0].id;
           html5QrCode.start(
             cameraId,
             config,
@@ -118,6 +116,7 @@
           }).catch(err => {
             statusEl.textContent = "Ошибка запуска камеры: " + err;
             statusEl.className = "err";
+            console.error("Camera start error:", err);
           });
         } else {
           statusEl.textContent = "Камера не найдена";
@@ -136,5 +135,4 @@
     window.addEventListener('load', startScanner);
   </script>
 </body>
-
 </html>
