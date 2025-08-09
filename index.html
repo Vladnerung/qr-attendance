@@ -90,17 +90,15 @@
     }
 
     const html5QrCode = new Html5Qrcode("reader");
-    const config = { fps: 10, qrbox: { width: 300, height: 200 } };
+    const config = { fps: 10, qrbox: { width: 300, height: 200 }, experimentalFeatures: { useBarCodeDetectorIfSupported: true } };
 
     function startScanner() {
       statusEl.textContent = "Инициализация камеры...";
       Html5Qrcode.getCameras().then(cameras => {
         if (cameras && cameras.length) {
-          // Предпочитаем заднюю камеру, если есть
-          const backCamera = cameras.find(cam => cam.label.toLowerCase().includes("back"));
-          const cameraId = backCamera ? backCamera.id : cameras[0].id;
+          // Запуск камеры с facingMode: environment (задняя камера)
           html5QrCode.start(
-            cameraId,
+            { facingMode: "environment" },
             config,
             onScanSuccess,
             (error) => {}
