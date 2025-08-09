@@ -101,7 +101,11 @@
       statusEl.textContent = "Инициализация камеры...";
       Html5Qrcode.getCameras().then(cameras => {
         if (cameras && cameras.length) {
-          const cameraId = cameras[0].id;
+          .catch(err => {
+  statusEl.textContent = "Ошибка запуска камеры: " + err;
+  statusEl.className = "err";
+  console.error("Camera start error:", err);
+});
           html5QrCode.start(
             cameraId,
             config,
@@ -132,4 +136,5 @@
     window.addEventListener('load', startScanner);
   </script>
 </body>
+
 </html>
